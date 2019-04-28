@@ -9,20 +9,22 @@ participants = 3
 Lounge = Lounge()
 
 
-def check_if_finished(bot, update, room_interface):
+def check_if_finished(bot, update, room_interface, delete=True):
 
     for topic in room_interface.questions:
         for question in room_interface.questions[topic]:
             if not room_interface.questions[topic][question].answered:
                 return 0
-    del Lounge.rooms[room_interface.number]
+    if delete:
+        Lounge.rooms[room_interface.number].players = {}
     return 1
 
 
 def dismiss_question(bot, job):
     room_id, topic, points = job.context[:3]
-    if check_if_finished(bot, 0, Lounge[room_id]):
+    if check_if_finished(bot, 0, Lounge[room_id], delete=False):
         inform_about_finish(bot, 0, Lounge[room_id])
+        Lounge[room_id].players = {}
         return ConversationHandler.END
     if not Lounge[room_id].questions[topic][points].answered:
         for player in Lounge[room_id].players:
