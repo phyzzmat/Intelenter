@@ -13,7 +13,8 @@ def begin(bot, update, chat_data):
 def choose_room(bot, update, chat_data):
 
     chat_data["room_to_add"] = update.message.text
-    room = session.query(Room).first()
+    room = session.query(Room).filter_by(number=update.message.text).first()
+    print(room, update.message.text)
 
     if room:
         chat_data["password_to_add"] = room.password
@@ -34,7 +35,7 @@ def password_to_existing_room(bot, update, chat_data):
 
     if update.message.text != chat_data["password_to_add"]:
         update.message.reply_text(
-            "К сожалению, введённый пароль неверен."
+            "К сожалению, введённый пароль неверен. "
             "Панель администратора закрыта."
         )
         return ConversationHandler.END
