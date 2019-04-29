@@ -22,6 +22,7 @@ class Room(Base):
                     ForeignKey('question.room'),
                     nullable=False)
     password = Column(String)
+    participants = Column(Integer)
 
 
 base_name = 'base.db'

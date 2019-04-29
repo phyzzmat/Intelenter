@@ -1,5 +1,5 @@
 from database import *
-
+from random import randint
 
 class Lounge:
 
@@ -15,10 +15,14 @@ class Lounge:
     def __setitem__(self, item, value):
         self.rooms[item] = value
 
+    def __delitem__(self, key):
+        del self.rooms[key]
+
 
 class RoomData:
 
-    def __init__(self, number):
+    def __init__(self, number, participants):
+        self.participants = participants
         self.players = {}
         self.number = number
         self.running = False
@@ -26,6 +30,7 @@ class RoomData:
         self.answering = None
         self.choosing = None
         self.cur_q = None
+        self.hash_f = randint(1, 10**9)
         self.questions = {}
         self.query()
 

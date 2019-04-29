@@ -27,7 +27,7 @@ def choose_room(bot, update, chat_data):
         update.message.reply_text(
             "Такой комнаты еще нет. Придумайте пароль для нее."
         )
-        return "create_new_room"
+        return "enter_password"
 
 
 def password_to_existing_room(bot, update, chat_data):
@@ -93,17 +93,35 @@ def enter_topic_and_points(bot, update, chat_data):
         return "enter_statement"
 
 
+def enter_password(bot, update, chat_data):
+
+    txt = update.message.text
+    chat_data["pass_to_add"] = txt
+    update.message.reply_text("Введите количество игроков.")
+    return "create_new_room"
+
+
 def create_new_room(bot, update, chat_data):
 
-    new_room = Room(password=update.message.text,
-                    number=chat_data["room_to_add"])
-    session.add(new_room)
-    session.commit()
+    txt = update.message.text
+    if txt.isdigit():
+        chat_data["part_to_add"] = int(txt)
+        new_room = Room(password=chat_data["pass_to_add"],
+                        number=chat_data["room_to_add"],
+                        participants=chat_data["part_to_add"]
+                        )
+        session.add(new_room)
+        session.commit()
 
-    update.message.reply_text(
-        "Комната успешно создана. Теперь напишите через запятую тему вопроса и стоимость."
-    )
-    return "enter_topic_and_points"
+        update.message.reply_text(
+            "Комната успешно создана. Теперь напишите через запятую тему вопроса и стоимость."
+        )
+        return "enter_topic_and_points"
+    else:
+        update.message.reply_text(
+            "Целое натуральное, плес."
+        )
+        return "create_new_room"
 
 
 def stop(bot, update):
@@ -144,8 +162,13 @@ def add_admin_commands(dp):
                 [MessageHandler(Filters.text,
                                 enter_answer,
                                 pass_chat_data=1)],
+            "enter_password":
+                [MessageHandler(Filters.text,
+                                enter_password,
+                                pass_chat_data=1)],
         },
-        fallbacks=[CommandHandler('stop', stop)]
+        fallbacks=[CommandHandler('stop', stop),
+                   CommandHandler('play', stop)]
     )
 
     dp.add_handler(admin_mode)

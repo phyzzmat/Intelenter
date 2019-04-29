@@ -1,30 +1,33 @@
 from telegram.ext import MessageHandler, Filters, CommandHandler, ConversationHandler
 from data_objects import *
 from database import *
-from random import choice
+from random import choice, randint
 from information import *
 
 
-participants = 3
 Lounge = Lounge()
 
 
-def check_if_finished(bot, update, room_interface, delete=True):
-
+def check_if_finished(bot, update, room_interface):
+    # Проверим, закончилось ли, путем проверки, ответили ли на все вопросы
     for topic in room_interface.questions:
         for question in room_interface.questions[topic]:
             if not room_interface.questions[topic][question].answered:
                 return 0
-    if delete:
-        Lounge.rooms[room_interface.number].players = {}
     return 1
 
 
 def dismiss_question(bot, job):
-    room_id, topic, points = job.context[:3]
-    if check_if_finished(bot, 0, Lounge[room_id], delete=False):
+
+    room_id, topic, points, hash_f = job.context[:4]
+    if hash_f != Lounge[room_id].hash_f:
+        return
+    # Хэш-функция проверяет, не началась ли другая сессия игры,
+    # для которой не релевантно истечение времени.
+
+    if check_if_finished(bot, 0, Lounge[room_id]):
         inform_about_finish(bot, 0, Lounge[room_id])
-        Lounge[room_id].players = {}
+        del Lounge[room_id]
         return ConversationHandler.END
     if not Lounge[room_id].questions[topic][points].answered:
         for player in Lounge[room_id].players:
@@ -37,11 +40,12 @@ def dismiss_question(bot, job):
         Lounge[room_id].mode = "choosing"
 
 
-
 def help_(bot, update):
     update.message.reply_text(
         "Добро пожаловать в нашего бота!\n"
-        "Напишите /play, чтобы начать играть"
+        "Напишите /play, чтобы начать играть. "
+        "Напишите /admin для создания комнат. "
+        "Синтаксис выбора вопроса: тема, количество очков."
     )
 
 
@@ -70,15 +74,17 @@ def enter_room(bot, update, chat_data):
         chat_data["room"] = room.number
         # Если нет такой комнаты в нашем онлайн-списке, добавляем
         if room.number not in Lounge.rooms:
-            Lounge.append(RoomData(room.number))
+            Lounge.append(RoomData(room.number, room.participants))
 
         room_interface = Lounge[room.number]
+        participants = room_interface.participants
         print(room_interface)
         if len(room_interface.players) == participants:
             update.message.reply_text(
                 "К сожалению, комната уже заполнена."
             )
         elif len(room_interface.players) == participants - 1:
+            # Если мы - последний игрок при заполнении
             update.message.reply_text(
                 "Ура! Вы заняли последнее место в комнате!"
             )
@@ -109,6 +115,7 @@ def enter_room(bot, update, chat_data):
 
 
 def set_up(bot, update, chat_data):
+    # Добавление комнаты в Lounge при начале игры. Рандомно выберем начинающего игрока.
     room_id = chat_data["room"]
     Lounge[room_id].mode = "choosing"
     Lounge[room_id].choosing = choice(list(Lounge[room_id].players.keys()))
@@ -117,7 +124,7 @@ def set_up(bot, update, chat_data):
             chat_id=player,
             text=f"Первый вопрос выбирает игрок "
                  f"{Lounge[room_id].players[Lounge[room_id].choosing].name}."
-    )
+        )
     print_question_list(bot, update, Lounge[room_id])
 
 
@@ -142,6 +149,7 @@ def check_answer(bot, update, chat_data, room_id):
     question = current_room.questions[topic][points]
 
     if (topic, points) not in current_room[chat_id].answered_q:
+        # Если человек еще не отвечал на этот вопрос
         current_room[chat_id].answered_q.add((topic, points))
         update.message.reply_text(
             "Хорошо, сейчас проверим..."
@@ -158,6 +166,7 @@ def check_answer(bot, update, chat_data, room_id):
 
             if check_if_finished(bot, update, Lounge[room_id]):
                 inform_about_finish(bot, update, Lounge[room_id])
+                del Lounge[room_id]
                 return ConversationHandler.END
         else:
             current_room[chat_id].points -= question.points
@@ -172,6 +181,7 @@ def check_answer(bot, update, chat_data, room_id):
                 Lounge[room_id].mode = "choosing"
                 if check_if_finished(bot, update, Lounge[room_id]):
                     inform_about_finish(bot, update, Lounge[room_id])
+                    del Lounge[room_id]
                     return ConversationHandler.END
 
         if Lounge[room_id].questions[topic][points].answered:
@@ -208,22 +218,25 @@ def choose_question(bot, update, chat_data, job_queue):
             print_question(bot, update, Lounge[room_id], topic, points)
             Lounge[room_id].cur_q = (topic, points)
             Lounge[room_id].mode = "answering"
-            job_queue.run_once(dismiss_question, TIME, context=[room_id, topic, points])
+            # Если за 30 секунд никто не ответил, пометим вопрос уже недоступным:
+            job_queue.run_once(dismiss_question, TIME, context=[room_id, topic, points,
+                                                                Lounge[room_id].hash_f])
     return "playing"
 
 
 def stop2(bot, update):
     update.message.reply_text(
-        "Ех :("
+        "Ех :( Если хотите играть заново, нажмите: /play."
     )
-    for i in Lounge:
-        del Lounge[i].players[update.message.chat_id]
+    for i in Lounge.rooms:
+        if update.message.chat_id in Lounge[i].players:
+            del Lounge[i].players[update.message.chat_id]
     return ConversationHandler.END
 
 
 def add_player_commands(dp):
 
-    help_me = CommandHandler('help', help_)
+    help_me = CommandHandler('start', help_)
     player_interface = ConversationHandler(
 
         entry_points=[CommandHandler('play', participate, pass_chat_data=1)],
@@ -242,7 +255,8 @@ def add_player_commands(dp):
                                 enter_room,
                                 pass_chat_data=1)],
         },
-        fallbacks=[CommandHandler('stop2', stop2)]
+        fallbacks=[CommandHandler('stop2', stop2),
+                   CommandHandler('play', stop2)]
     )
 
     dp.add_handler(player_interface)
