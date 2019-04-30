@@ -2,7 +2,9 @@ from database import *
 from random import randint
 
 class Lounge:
-
+# Зал, в котором много комнат. Невозможно хранить все данные в chat_data, поскольку они не индивидуальны.
+# Например, часто нужно разослать сообщение всем участникам комнаты.
+    
     def __init__(self):
         self.rooms = {}
 
@@ -22,16 +24,16 @@ class Lounge:
 class RoomData:
 
     def __init__(self, number, participants):
-        self.participants = participants
-        self.players = {}
-        self.number = number
+        self.participants = participants # количество разрешенных участков
+        self.players = {} # список игроков комнаты
+        self.number = number # номер комнаты
         self.running = False
-        self.mode = False
-        self.answering = None
-        self.choosing = None
-        self.cur_q = None
+        self.mode = False # режим комнаты (выбор вопроса или ответ на вопрос)
+        self.answering = None # deprecated
+        self.choosing = None # ID игрока, который выбирает
+        self.cur_q = None # Вопрос на данный момент
         self.hash_f = randint(1, 10**9)
-        self.questions = {}
+        self.questions = {} # Словарь вопросов в комнате
         self.query()
 
     def query(self):
@@ -51,11 +53,11 @@ class RoomData:
 class QuestionInstance:
 
     def __init__(self, class_object):
-        self.answered = 0
-        self.answer = class_object.answer
-        self.statement = class_object.statement
-        self.points = class_object.points
-        self.topic = class_object.topic
+        self.answered = 0 # использован ли (т.е. вообще поднимался ли вопрос)
+        self.answer = class_object.answer # ответ
+        self.statement = class_object.statement # условие
+        self.points = class_object.points # количество баллов
+        self.topic = class_object.topic # тема
 
 
 class Player:
