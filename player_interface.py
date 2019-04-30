@@ -78,7 +78,6 @@ def enter_room(bot, update, chat_data):
 
         room_interface = Lounge[room.number]
         participants = room_interface.participants
-        print(room_interface)
         if len(room_interface.players) == participants:
             update.message.reply_text(
                 "К сожалению, комната уже заполнена."
