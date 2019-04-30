@@ -1,5 +1,6 @@
 TIME = 30
 
+# Объявим участникам комнаты, что игра началась, когда зашли все.
 def inform_about_start(bot, update, room_interface):
     print(room_interface.players)
     for player in room_interface.players:
@@ -8,6 +9,8 @@ def inform_about_start(bot, update, room_interface):
             text="Ура! Игра началась!"
         )
 
+        
+# Проинформировать об ответе (верном или неверном) другого игрока (или вас).
 def inform_about_answer(bot, update, answer, room_interface, corr=0):
     for player in room_interface.players:
         bot.send_message(
@@ -18,9 +21,11 @@ def inform_about_answer(bot, update, answer, room_interface, corr=0):
         )
 
 
+# Проинформировать об окончании, когда закончились все вопросы.
 def inform_about_finish(bot, update, room_interface):
     results = ["Результаты."]
     for i in room_interface.players:
+        # Скажем о результатах.
         results.append(f'{room_interface.players[i].name}: {room_interface.players[i].points} б.')
     for player in room_interface.players:
         bot.send_message(
@@ -38,7 +43,7 @@ def print_question_list(bot, update, room_interface):
         for topic in room_interface.questions:
             s.append(f"""Тема: {topic}. Вопросы: {', '.join(
                 [str(i.points) for i in room_interface.questions[topic].values() if
-                 not i.answered]
+                 not i.answered] # Печатаем только неотвеченные вопросы.
             )}""")
         bot.send_message(
             chat_id=player,
