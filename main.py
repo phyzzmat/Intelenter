@@ -6,7 +6,7 @@ TIME = 30
 # Ядро.
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-TOKEN = "829719381:AAH7KMl8OeBvMq5ZLOWebK99lHAi4PrS-O4"
+TOKEN = ...
 
 updater = Updater(TOKEN)
 dp = updater.dispatcher
